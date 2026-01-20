@@ -1,3 +1,4 @@
+
 # Challenge Backend - Event Management System
 
 ## Project Overview
@@ -22,23 +23,41 @@ This project is a Node.js backend for an Event Management System using Fastify. 
 - `npm run dev`: Starts the server in development mode with auto-reload (requires `nodemon`).
 - `npm run lint`: Runs ESLint on the entire project.
 - `npm run format`: Formats the code with Prettier.
+- `npm test`: Runs automated tests with Jest.
 
 ### 5. Folder Structure
 - `services/`: Main backend logic.
 - `mock-server/`: Mock of external services for local testing.
 - `utils/`: Utilities and helpers.
+- `test/`: Automated tests for endpoints.
 
 ### 6. Dependencies
 - Fastify for the HTTP server.
 - MSW to mock external services.
+- Jest and node-fetch for testing.
 
-### 7. Testing (Pending)
-- No automated tests yet. It is recommended to add Jest or similar for unit and integration testing.
+### 7. Testing
+- Automated tests for main endpoints using Jest (`test/events.test.js`).
+- Tests cover:
+	- GET /getUsers
+	- GET /getEvents
+	- POST /addEvent (including circuit breaker behavior)
 
 ### 8. Security and Best Practices
 - Do not commit `.env` or sensitive data to the repository.
 - Use environment variables for endpoints and sensitive configurations.
 - Keep dependencies up to date.
+
+## Performance Improvements
+- `/getEventsByUserId/:id` endpoint was optimized to fetch all events in parallel using `Promise.all`, greatly improving response time for users with many events.
+- The original sequential code is commented for reference in `services/index.js`.
+
+## Resilience Improvements
+- `/addEvent` endpoint now implements a manual circuit breaker:
+	- Detects 3+ failures in a 30-second window.
+	- Opens the circuit and rejects new requests for 30 seconds.
+	- Periodically probes the external service and resumes normal operation when available.
+	- Returns appropriate 503 error responses to clients when the service is unavailable.
 
 ## Setup
 ```bash
@@ -48,9 +67,10 @@ npm start
 ```
 
 ## Decisions
-- ESLint and Prettier were chosen as they are industry standards.
-- Each configuration is documented to facilitate onboarding and maintenance.
-- It is recommended to add continuous integration (CI) and tests in the future.
+- ESLint and Prettier were chosen as industry standards.
+- Jest was used for automated endpoint testing.
+- All configuration and improvements are documented for clarity and maintainability.
+- Continuous integration (CI) is recommended for future improvements.
 
 ---
 
