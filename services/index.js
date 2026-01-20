@@ -7,7 +7,42 @@ fastify.get('/getUsers', async (request, reply) => {
     reply.send(data); 
 });
 
+
+// ---
+// RESILIENCIA: Circuit Breaker manual para /addEvent
+// Si el servicio externo falla 3+ veces en 30s, se "abre" el circuito y se rechazan nuevas peticiones
+// Se prueba periódicamente si el servicio externo se recupera para volver a aceptar peticiones
+// ---
+
+const failureTimestamps = [];
+let circuitOpen = false;
+let nextProbe = null;
+const FAILURE_WINDOW = 30 * 1000; // 30 segundos
+const FAILURE_THRESHOLD = 3;
+const BACKOFF_TIME = 30 * 1000; // 30 segundos
+
+async function probeExternalService() {
+  try {
+    const resp = await fetch('http://event.com/addEvent', {
+      method: 'POST',
+      body: JSON.stringify({ name: '__probe__', userId: 'probe' })
+    });
+    if (resp.ok) {
+      circuitOpen = false;
+      failureTimestamps.length = 0;
+      nextProbe = null;
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
 fastify.post('/addEvent', async (request, reply) => {
+  // Si el circuito está abierto, rechazar petición
+  if (circuitOpen) {
+    reply.code(503).send({ error: 'Servicio externo temporalmente no disponible. Intente más tarde.' });
+    return;
+  }
   try {
     const resp = await fetch('http://event.com/addEvent', {
       method: 'POST',
@@ -16,10 +51,37 @@ fastify.post('/addEvent', async (request, reply) => {
         ...request.body
       })
     });
+    if (!resp.ok) throw new Error('External service error');
     const data = await resp.json();
     reply.send(data);
-  } catch(err) {
-    reply.error(err);
+    // Si fue exitosa, limpiar fallos viejos
+    const now = Date.now();
+    while (failureTimestamps.length && now - failureTimestamps[0] > FAILURE_WINDOW) {
+      failureTimestamps.shift();
+    }
+  } catch (err) {
+    // Registrar fallo
+    const now = Date.now();
+    failureTimestamps.push(now);
+    // Limpiar fallos viejos
+    while (failureTimestamps.length && now - failureTimestamps[0] > FAILURE_WINDOW) {
+      failureTimestamps.shift();
+    }
+    // Si supera el umbral, abrir circuito
+    if (failureTimestamps.length >= FAILURE_THRESHOLD && !circuitOpen) {
+      circuitOpen = true;
+      // Programar probe para reintentar después de BACKOFF_TIME
+      if (!nextProbe) {
+        nextProbe = setTimeout(async () => {
+          const ok = await probeExternalService();
+          if (!ok) {
+            // Si sigue fallando, reintentar después de otro BACKOFF_TIME
+            nextProbe = setTimeout(arguments.callee, BACKOFF_TIME);
+          }
+        }, BACKOFF_TIME);
+      }
+    }
+    reply.code(503).send({ error: 'No se pudo agregar el evento. Servicio externo no disponible.' });
   }
 });
 
@@ -29,20 +91,46 @@ fastify.get('/getEvents', async (request, reply) => {
     reply.send(data);
 });
 
+/*******************************************************************
+*  OPTIMIZACIÓN DE RENDIMIENTO EN /getEventsByUserId/:id
+*  El endpoint original obtenía los eventos de un usuario haciendo peticiones secuenciales,
+*  lo que generaba lentitud con muchos eventos. Ahora, las peticiones a los eventos se hacen
+*  en paralelo usando Promise.all, acelerando la respuesta. El código original se deja * mentado
+*  para referencia y comparación.
+*   *******************************************************************/
 fastify.get('/getEventsByUserId/:id', async (request, reply) => {
     const { id } = request.params;
     const user = await fetch('http://event.com/getUserById/' + id);
     const userData = await user.json();
     const userEvents = userData.events;
-    const eventArray = [];
-    
-    for(let i = 0; i < userEvents.length; i++) {
-        const event = await fetch('http://event.com/getEventById/' + userEvents[i]);
-        const eventData = await event.json();
-        eventArray.push(eventData);
-    }
+
+
+    // --- Código original secuencial (lento) ---
+    // fastify.get('/getEventsByUserId/:id', async (request, reply) => {
+    //     const { id } = request.params;
+    //     const user = await fetch('http://event.com/getUserById/' + id);
+    //     const userData = await user.json();
+    //     const userEvents = userData.events;
+    //     const eventArray = [];
+    //     
+    //     for(let i = 0; i < userEvents.length; i++) {
+    //         const event = await fetch('http://event.com/getEventById/' + userEvents[i]);
+    //         const eventData = await event.json();
+    //         eventArray.push(eventData);
+    //     }
+    //     reply.send(eventArray);
+    // });
+
+    // --- Versión optimizada: fetch en paralelo ---
+    // Fetch all events in parallel
+    const eventArray = await Promise.all(
+      userEvents.map(async (eventId) => {
+        const event = await fetch('http://event.com/getEventById/' + eventId);
+        return event.json();
+      })
+    );
     reply.send(eventArray);
-});
+    });
 
 fastify.listen({ port: 3000 }, (err) => {
     listenMock();
