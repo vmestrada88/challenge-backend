@@ -1,3 +1,8 @@
+/**
+ * Imports the `fetch` function from the 'node-fetch' package, allowing you to make HTTP requests in Node.js environments.
+ * @module fetch
+ * @see {@link https://www.npmjs.com/package/node-fetch|node-fetch documentation}
+ */
 const fetch = require('node-fetch');
 
 const BASE_URL = 'http://localhost:3000';
