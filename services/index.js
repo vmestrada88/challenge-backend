@@ -14,13 +14,23 @@ fastify.get('/getUsers', async (request, reply) => {
 // Se prueba periódicamente si el servicio externo se recupera para volver a aceptar peticiones
 // ---
 
+
+// --- Circuit Breaker State ---
+// failureTimestamps: almacena timestamps de los fallos recientes
 const failureTimestamps = [];
+// circuitOpen: indica si el circuito está abierto (rechazando peticiones)
 let circuitOpen = false;
+// nextProbe: referencia al timer para el próximo intento de recuperación
 let nextProbe = null;
+// FAILURE_WINDOW: ventana de tiempo para contar fallos (30s)
 const FAILURE_WINDOW = 30 * 1000; // 30 segundos
+// FAILURE_THRESHOLD: cantidad de fallos para abrir el circuito
 const FAILURE_THRESHOLD = 3;
+// BACKOFF_TIME: tiempo de espera antes de probar recuperación
 const BACKOFF_TIME = 30 * 1000; // 30 segundos
 
+
+// probeExternalService: intenta una petición dummy para ver si el servicio externo se recuperó
 async function probeExternalService() {
   try {
     const resp = await fetch('http://event.com/addEvent', {
@@ -38,12 +48,13 @@ async function probeExternalService() {
 }
 
 fastify.post('/addEvent', async (request, reply) => {
-  // Si el circuito está abierto, rechazar petición
+  // Si el circuito está abierto, rechazar petición inmediatamente
   if (circuitOpen) {
     reply.code(503).send({ error: 'Servicio externo temporalmente no disponible. Intente más tarde.' });
     return;
   }
   try {
+    // Intentar agregar el evento normalmente
     const resp = await fetch('http://event.com/addEvent', {
       method: 'POST',
       body: JSON.stringify({
@@ -54,23 +65,23 @@ fastify.post('/addEvent', async (request, reply) => {
     if (!resp.ok) throw new Error('External service error');
     const data = await resp.json();
     reply.send(data);
-    // Si fue exitosa, limpiar fallos viejos
+    // Si fue exitosa, limpiar fallos viejos fuera de la ventana
     const now = Date.now();
     while (failureTimestamps.length && now - failureTimestamps[0] > FAILURE_WINDOW) {
       failureTimestamps.shift();
     }
   } catch (err) {
-    // Registrar fallo
+    // Registrar timestamp del fallo
     const now = Date.now();
     failureTimestamps.push(now);
-    // Limpiar fallos viejos
+    // Limpiar fallos viejos fuera de la ventana
     while (failureTimestamps.length && now - failureTimestamps[0] > FAILURE_WINDOW) {
       failureTimestamps.shift();
     }
-    // Si supera el umbral, abrir circuito
+    // Si supera el umbral de fallos, abrir circuito y programar probe
     if (failureTimestamps.length >= FAILURE_THRESHOLD && !circuitOpen) {
       circuitOpen = true;
-      // Programar probe para reintentar después de BACKOFF_TIME
+      // Programar intento de recuperación tras BACKOFF_TIME
       if (!nextProbe) {
         nextProbe = setTimeout(async () => {
           const ok = await probeExternalService();
