@@ -6,52 +6,53 @@ This project is a Node.js backend for an Event Management System using Fastify. 
 ## Production-Ready Configuration
 
 ### 1. Environment Variables
-- Separated configuration using environment variables.
-- Archivo `.env.example` agregado para mostrar las variables necesarias.
+- Configuration is separated using environment variables.
+- `.env.example` file added to show the required variables.
 
 ### 2. Git Ignore
-- Archivo `.gitignore` para evitar subir archivos sensibles y dependencias (`node_modules`, `.env`, etc).
+- `.gitignore` file to prevent committing sensitive files and dependencies (`node_modules`, `.env`, etc).
 
-### 3. Linting y Formateo
-- Configuración de ESLint (`.eslintrc.json`) para mantener la calidad del código.
-- Configuración de Prettier (`.prettierrc`) para formato consistente.
-- Scripts agregados en `package.json` para lint y format.
+### 3. Linting and Formatting
+- ESLint configuration (`.eslintrc.json`) to maintain code quality.
+- Prettier configuration (`.prettierrc`) for consistent formatting.
+- Scripts added in `package.json` for linting and formatting.
 
-### 4. Scripts Útiles
-- `npm run start`: Inicia el servidor en modo producción.
-- `npm run dev`: Inicia el servidor en modo desarrollo con recarga automática (requiere `nodemon`).
-- `npm run lint`: Ejecuta ESLint en todo el proyecto.
-- `npm run format`: Formatea el código con Prettier.
+### 4. Useful Scripts
+- `npm run start`: Starts the server in production mode.
+- `npm run dev`: Starts the server in development mode with auto-reload (requires `nodemon`).
+- `npm run lint`: Runs ESLint on the entire project.
+- `npm run format`: Formats the code with Prettier.
 
-### 5. Estructura de Carpetas
-- `services/`: Lógica principal del backend.
-- `mock-server/`: Mock de servicios externos para pruebas locales.
-- `utils/`: Utilidades y helpers.
+### 5. Folder Structure
+- `services/`: Main backend logic.
+- `mock-server/`: Mock of external services for local testing.
+- `utils/`: Utilities and helpers.
 
-### 6. Dependencias
-- Fastify para el servidor HTTP.
-- MSW para simular servicios externos.
+### 6. Dependencies
+- Fastify for the HTTP server.
+- MSW to mock external services.
 
-### 7. Testing (Pendiente)
-- No hay tests automáticos. Se recomienda agregar Jest o similar para pruebas unitarias y de integración.
+### 7. Testing (Pending)
+- No automated tests yet. It is recommended to add Jest or similar for unit and integration testing.
 
-### 8. Seguridad y Buenas Prácticas
-- No subir `.env` ni datos sensibles al repositorio.
-- Usar variables de entorno para endpoints y configuraciones sensibles.
-- Mantener dependencias actualizadas.
+### 8. Security and Best Practices
+- Do not commit `.env` or sensitive data to the repository.
+- Use environment variables for endpoints and sensitive configurations.
+- Keep dependencies up to date.
 
 ## Setup
 ```bash
 npm install
-cp .env.example .env # y personalizar si es necesario
+cp .env.example .env # and customize if necessary
 npm start
 ```
 
-## Decisiones
-- Se eligió ESLint y Prettier por ser estándar en la industria.
-- Se documentó cada configuración para facilitar onboarding y mantenimiento.
-- Se recomienda agregar integración continua (CI) y tests en el futuro.
+## Decisions
+- ESLint and Prettier were chosen as they are industry standards.
+- Each configuration is documented to facilitate onboarding and maintenance.
+- It is recommended to add continuous integration (CI) and tests in the future.
 
 ---
 
-Para dudas, revisar el archivo `DevTask.md` para instrucciones específicas del challenge.
+For questions, check the `DevTask.md` file for specific challenge instructions.
+
