@@ -72,3 +72,13 @@ Note: One of the dependent external API is mocked to delay the response. It is a
 4. The solution should be implemented without using third-party libraries specifically designed for this pattern (implement your own solution).
 
 Good luck!
+
+
+# TASK 5:
+Add a retry mechanism for the /addEvent endpoint that:
+- Retries failed requests up to 3 times
+- Uses exponential backoff (1 second, 2 seconds, 4 seconds)
+- Works together with your existing circuit breaker
+
+You can create a new utility function or modify existing code. 
+Show me how you'd integrate retry with the circuit breaker.

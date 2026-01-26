@@ -86,6 +86,7 @@ const server = setupServer(
       return HttpResponse.error(new Error('Server error occurred'));
     } 
     return HttpResponse.json(userStore.getUsers());
+    // return HttpResponse.json(user);
   }),
 
   http.get('http://event.com/getUserById/:id', ({params}) => {
